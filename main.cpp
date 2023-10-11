@@ -2,6 +2,7 @@
 #include <utility>
 #include <vector>
 #include <cctype>
+#include <fstream>
 using namespace std;
 
 struct Token{
@@ -18,7 +19,7 @@ public:
     explicit IdentifierToken(string name) : name(std::move(name)) {
     }
     string toString() const override {
-        return "IdentifierToken";
+        return "IdentifierToken(" + name + ")";
     }
 };
 
@@ -29,7 +30,7 @@ public:
     explicit NumberToken(const int value) : value(value) {
     }
     string toString() const override {
-        return "NumberToken";
+        return "NumberToken(" + to_string(value) + ")";
     }
 };
 
@@ -47,17 +48,70 @@ public:
     }
 };
 
+class VarDecToken : public Token {
+public:
+    string toString() const override {
+        return "VarDecToken";
+    }
+};
+
+class TrueToken : public Token {
+public:
+    string toString() const override {
+        return "TrueToken";
+    }
+};
+
+class FalseToken : public Token {
+public:
+    string toString() const override {
+        return "FalseToken";
+    }
+};
+
+class WhileToken : public Token {
+public:
+    string toString() const override {
+        return "WhileToken";
+    }
+};
+
+class LeftParenToken : public Token {
+public:
+    string toString() const override {
+        return "LeftParenToken";
+    }
+};
+
+class RightParenToken : public Token {
+public:
+    string toString() const override {
+        return "RightParenToken";
+    }
+};
+
 class Tokenizer{
 public:
     const string input;
     int position;
     explicit Tokenizer(string input) : input(std::move(input)), position(0){}
+    Token* tokenizeSymbol(){
+        if(input[position] == '('){
+            position++;
+            return new LeftParenToken();
+        } else if (input[position] == ')'){
+            position++;
+            return new RightParenToken();
+        } else {
+            return nullptr;
+        }
+    }
     Token* tokenizeIdentifierOrReservedWord(){
         string name;
         if(isalpha(input[position])){ // If character at current position is letter
             name += input[position];
             position++;
-            while(isalnum(input[position])){ // add letters to name
+            while(position < input.length() && isalnum(input[position])){ // add letters to name
                 name += input[position];
                 position++;
             }
@@ -69,13 +123,23 @@ public:
                 return new IntToken();
             } else if(name == "bool"){
                 return new BoolToken();
+            } else if(name == "true"){
+                return new TrueToken();
+            } else if(name == "false"){
+                return new FalseToken();
+            } else if(name == "vardec"){
+                return new VarDecToken();
+            } else if(name == "while"){
+                return new WhileToken();
+            } else {
+                return new IdentifierToken(name);
             }
         }
         return nullptr;
     }
     NumberToken* tokenizeNumber(){
         string digits;
-        while(isdigit(input[position])){
+        while(position < input.length() && isdigit(input[position])){
             digits += input[position];
             position++;
         }
@@ -94,15 +158,20 @@ public:
         if(retval != nullptr){
             return retval;
         }
+        retval = tokenizeSymbol();
+        if(retval != nullptr){
+            return retval;
+        }
         return nullptr;
     }
     void skipWhitespace(){
-        while (isspace(input[position])){
+        while (position < input.length() && isspace(input[position])){
             position++;
         }
     }
     vector<Token *> tokenize(){
         vector<Token*> retval = vector<Token*>();
+        skipWhitespace();
         while(position < input.length()){
             retval.push_back(readToken());
             skipWhitespace();
@@ -113,7 +182,9 @@ public:
 
 
 int main() {
-    vector<Token *> t = Tokenizer("45 45 int 123452435 12").tokenize();
+    string snippet = "vardec x 546";
+
+    vector<Token *> t = Tokenizer(snippet).tokenize();
     for (Token* token : t) {
         cout << token->toString() << endl;
     }
